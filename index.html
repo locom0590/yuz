@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <video id="video" width="640" height="480" autoplay style="display:none"></video>
+    <div id="status" style="font-size: 24px; font-weight: bold;">Gözlerinizi Kırpın...</div>
+
+    <script type="module">
+        import { FaceMesh } from "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
+        
+        // Basit bir mantık: 159 (üst) ve 145 (alt) nokta arasındaki mesafe
+        function calculateEyeDistance(landmarks) {
+            const top = landmarks[159];
+            const bottom = landmarks[145];
+            return Math.abs(top.y - bottom.y);
+        }
+
+        // Burada MediaPipe ile kamera stream'ini işleyip 
+        // calculateEyeDistance değerini 0.05 altına düştüğünde
+        // "Göz Kırpıldı" aksiyonunu tetikleyeceğiz.
+    </script>
+</body>
+</html>
