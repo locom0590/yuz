@@ -1,43 +1,58 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>FTR Göz Kapanma Oyunu</title>
+    <title>FTR Göz Kapanma Oyunu - Görsel</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #f0f0f0; }
+        #canvas-container { position: relative; margin: auto; }
+        canvas { border: 5px solid #333; border-radius: 20px; background: white; }
+    </style>
 </head>
 <body>
-    <video id="video" style="display:none"></video>
-    <div style="text-align:center; font-family:sans-serif;">
-        <h1>Göz Kapanma Egzersizi</h1>
-        <div id="score" style="font-size:30px; color:blue;">Hazırlanıyor...</div>
-        <canvas id="output" width="640" height="480"></canvas>
+    <h1>Göz Kapanma Egzersizi: "Gözünü Kapat!"</h1>
+    <div id="canvas-container">
+        <canvas id="gameCanvas" width="400" height="200"></canvas>
     </div>
+    <video id="video" style="display:none"></video>
 
     <script type="module">
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('output');
-        const scoreElement = document.getElementById('score');
         
-        let maxClosure = 0; // Dinamik eşik için başlangıç değeri
-        
+        let maxClosure = 0.03; // Başlangıç eşiği
+
+        // Görselleştirme: Basit bir göz karakteri çizimi
+        function drawEye(closedPercentage) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(200, 100, 50, 0, Math.PI * 2);
+            ctx.fillStyle = "#fff"; ctx.fill(); ctx.stroke();
+            
+            // Göz kapağı animasyonu
+            let eyelidHeight = 100 * (closedPercentage / 100);
+            ctx.fillStyle = "#ffcc99"; // Ten rengi
+            ctx.fillRect(150, 50, 100, eyelidHeight);
+        }
+
         const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
         faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true });
 
         faceMesh.onResults((results) => {
             if (results.multiFaceLandmarks) {
-                for (const landmarks of results.multiFaceLandmarks) {
-                    // 159: Sağ üst, 145: Sağ alt (Etkilenen taraf seçimi)
-                    const eyeTop = landmarks[159];
-                    const eyeBottom = landmarks[145];
-                    const distance = Math.sqrt(Math.pow(eyeTop.x - eyeBottom.x, 2) + Math.pow(eyeTop.y - eyeBottom.y, 2));
+                const landmarks = results.multiFaceLandmarks[0];
+                const eyeTop = landmarks[159];
+                const eyeBottom = landmarks[145];
+                const distance = Math.abs(eyeTop.y - eyeBottom.y);
 
-                    // Dinamik Eşik Güncelleme: O anki en iyi kapanma değerini yakala
-                    if (distance > maxClosure) maxClosure = distance;
-
-                    // Asimetri Skoru: 0 (açık) ile 100 (tam kapalı) arası
-                    const score = Math.max(0, (1 - (distance / maxClosure)) * 100);
-                    scoreElement.innerText = `Kapanma Performansı: %${score.toFixed(1)}`;
-                }
+                if (distance > maxClosure) maxClosure = distance;
+                
+                // Skoru 0-100 arası bir yüzdeye çevir
+                let score = Math.max(0, Math.min(100, (1 - (distance / maxClosure)) * 100));
+                
+                drawEye(score); // Görselleştirme fonksiyonunu tetikle
             }
         });
 
