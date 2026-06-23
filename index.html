@@ -1,22 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
+<head>
+    <title>FTR Göz Kapanma Oyunu</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+</head>
 <body>
-    <video id="video" width="640" height="480" autoplay style="display:none"></video>
-    <div id="status" style="font-size: 24px; font-weight: bold;">Gözlerinizi Kırpın...</div>
+    <video id="video" style="display:none"></video>
+    <div style="text-align:center; font-family:sans-serif;">
+        <h1>Göz Kapanma Egzersizi</h1>
+        <div id="score" style="font-size:30px; color:blue;">Hazırlanıyor...</div>
+        <canvas id="output" width="640" height="480"></canvas>
+    </div>
 
     <script type="module">
-        import { FaceMesh } from "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('output');
+        const scoreElement = document.getElementById('score');
         
-        // Basit bir mantık: 159 (üst) ve 145 (alt) nokta arasındaki mesafe
-        function calculateEyeDistance(landmarks) {
-            const top = landmarks[159];
-            const bottom = landmarks[145];
-            return Math.abs(top.y - bottom.y);
-        }
+        let maxClosure = 0; // Dinamik eşik için başlangıç değeri
+        
+        const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true });
 
-        // Burada MediaPipe ile kamera stream'ini işleyip 
-        // calculateEyeDistance değerini 0.05 altına düştüğünde
-        // "Göz Kırpıldı" aksiyonunu tetikleyeceğiz.
+        faceMesh.onResults((results) => {
+            if (results.multiFaceLandmarks) {
+                for (const landmarks of results.multiFaceLandmarks) {
+                    // 159: Sağ üst, 145: Sağ alt (Etkilenen taraf seçimi)
+                    const eyeTop = landmarks[159];
+                    const eyeBottom = landmarks[145];
+                    const distance = Math.sqrt(Math.pow(eyeTop.x - eyeBottom.x, 2) + Math.pow(eyeTop.y - eyeBottom.y, 2));
+
+                    // Dinamik Eşik Güncelleme: O anki en iyi kapanma değerini yakala
+                    if (distance > maxClosure) maxClosure = distance;
+
+                    // Asimetri Skoru: 0 (açık) ile 100 (tam kapalı) arası
+                    const score = Math.max(0, (1 - (distance / maxClosure)) * 100);
+                    scoreElement.innerText = `Kapanma Performansı: %${score.toFixed(1)}`;
+                }
+            }
+        });
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => { await faceMesh.send({image: videoElement}); },
+            width: 640, height: 480
+        });
+        camera.start();
     </script>
 </body>
 </html>
