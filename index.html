@@ -1,60 +1,72 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>FTR Göz Kapanma Oyunu - Görsel</title>
+    <meta charset="UTF-8">
+    <title>Gülümseme Çiçeği - FTR Oyunu</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-        body { text-align: center; font-family: sans-serif; background: #f0f0f0; }
-        #canvas-container { position: relative; margin: auto; }
-        canvas { border: 5px solid #333; border-radius: 20px; background: white; }
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #e0f7fa; font-family: sans-serif; }
+        #canvas-wrapper { position: relative; width: 640px; height: 480px; }
+        canvas { position: absolute; left: 0; top: 0; transform: scaleX(-1); } /* Kamera ayna modu */
+        #game-ui { margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
-    <h1>Göz Kapanma Egzersizi: "Gözünü Kapat!"</h1>
-    <div id="canvas-container">
-        <canvas id="gameCanvas" width="400" height="200"></canvas>
+
+    <h1>Gülümseme Çiçeği</h1>
+    <div id="canvas-wrapper">
+        <canvas id="output" width="640" height="480"></canvas>
     </div>
+    <div id="game-ui">
+        <h2 id="score-text">Çiçeğin durumunu görmek için gülümse!</h2>
+    </div>
+
     <video id="video" style="display:none"></video>
 
     <script type="module">
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
         const videoElement = document.getElementById('video');
-        
-        let maxClosure = 0.03; // Başlangıç eşiği
-
-        // Görselleştirme: Basit bir göz karakteri çizimi
-        function drawEye(closedPercentage) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.arc(200, 100, 50, 0, Math.PI * 2);
-            ctx.fillStyle = "#fff"; ctx.fill(); ctx.stroke();
-            
-            // Göz kapağı animasyonu
-            let eyelidHeight = 100 * (closedPercentage / 100);
-            ctx.fillStyle = "#ffcc99"; // Ten rengi
-            ctx.fillRect(150, 50, 100, eyelidHeight);
-        }
+        const canvasElement = document.getElementById('output');
+        const canvasCtx = canvasElement.getContext('2d');
+        const scoreText = document.getElementById('score-text');
 
         const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
         faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true });
 
         faceMesh.onResults((results) => {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
             if (results.multiFaceLandmarks) {
                 const landmarks = results.multiFaceLandmarks[0];
-                const eyeTop = landmarks[159];
-                const eyeBottom = landmarks[145];
-                const distance = Math.abs(eyeTop.y - eyeBottom.y);
+                // 61: Sol dudak, 291: Sağ dudak, 4: Burun ucu
+                const leftLip = landmarks[61];
+                const rightLip = landmarks[291];
+                const nose = landmarks[4];
 
-                if (distance > maxClosure) maxClosure = distance;
+                const leftDist = Math.abs(leftLip.x - nose.x);
+                const rightDist = Math.abs(rightLip.x - nose.x);
                 
-                // Skoru 0-100 arası bir yüzdeye çevir
-                let score = Math.max(0, Math.min(100, (1 - (distance / maxClosure)) * 100));
+                // Asimetri hesabı: Fark ne kadar azsa o kadar iyi
+                const asymmetry = Math.abs(leftDist - rightDist);
+                const smileIntensity = (leftDist + rightDist) / 2;
                 
-                drawEye(score); // Görselleştirme fonksiyonunu tetikle
+                // Puanlama (Asimetri azaldıkça çiçek büyür)
+                let flowerSize = (smileIntensity * 500) - (asymmetry * 1000);
+                flowerSize = Math.max(20, Math.min(150, flowerSize));
+
+                // Çiçeği çiz
+                drawFlower(flowerSize, asymmetry < 0.02);
             }
         });
+
+        function drawFlower(size, isSymmetric) {
+            canvasCtx.beginPath();
+            canvasCtx.arc(320, 240, size / 2, 0, Math.PI * 2);
+            canvasCtx.fillStyle = isSymmetric ? "#FFD700" : "#9E9E9E"; // Sarı (başarılı) veya Gri
+            canvasCtx.fill();
+            scoreText.innerText = isSymmetric ? "Harika! Çiçeğin açtı!" : "Daha simetrik gülümsemeye çalış!";
+        }
 
         const camera = new Camera(videoElement, {
             onFrame: async () => { await faceMesh.send({image: videoElement}); },
