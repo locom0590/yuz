@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fasyal Egzersiz - Kesikli Oval</title>
+    <title>Fasyal Egzersiz</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         body { text-align: center; font-family: sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: #000; }
+        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: #000; min-height: 480px; }
         #webcam { width: 100%; transform: scaleX(-1); display: block; }
         #overlayCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         #gaugeContainer { width: 80%; max-width: 300px; height: 30px; background: #ddd; margin: 20px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
@@ -45,6 +45,20 @@
         
         let faceLandmarker;
 
+        // Oval çizim fonksiyonu
+        function drawOval() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.setLineDash([10, 10]);
+            ctx.ellipse(canvas.width/2, canvas.height/2, canvas.width*0.25, canvas.height*0.35, 0, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         async function initMediaPipe() {
             const { FaceLandmarker, FilesetResolver } = vision;
             const visionResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
@@ -52,47 +66,42 @@
                 baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
                 runningMode: "VIDEO"
             });
-            predictWebcam();
+            // Model hazır olduğunda döngüyü başlat
+            requestAnimationFrame(predictWebcam);
         }
 
-        function drawOval() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.setLineDash([10, 10]); // Kesikli çizgi tanımlandı
-            ctx.ellipse(canvas.width/2, canvas.height/2, canvas.width*0.25, canvas.height*0.35, 0, 0, 2 * Math.PI);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.lineWidth = 5;
-            ctx.stroke();
-            ctx.setLineDash([]); // Çizgiyi normale döndür
-        }
-
-        async function predictWebcam() {
-            drawOval(); // Her karede ovali tekrar çiz
-            const results = faceLandmarker.detectForVideo(video, performance.now());
-
-            if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-                const landmarks = results.faceLandmarks[0];
-                const leftY = landmarks[70].y;
-                const rightY = landmarks[300].y;
-                const diff = Math.abs(leftY - rightY);
-                const score = Math.max(0, 100 - (diff * 1500)); 
-                gaugeFill.style.width = score + "%";
-                scoreText.innerText = "Puan: " + Math.round(score);
+        function predictWebcam() {
+            drawOval(); // Ovali her frame'de çiz
+            if (faceLandmarker && video.readyState === 4) {
+                const results = faceLandmarker.detectForVideo(video, performance.now());
+                if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+                    const landmarks = results.faceLandmarks[0];
+                    const leftY = landmarks[70].y;
+                    const rightY = landmarks[300].y;
+                    const diff = Math.abs(leftY - rightY);
+                    const score = Math.max(0, 100 - (diff * 1500)); 
+                    gaugeFill.style.width = score + "%";
+                    scoreText.innerText = "Puan: " + Math.round(score);
+                }
             }
-            window.requestAnimationFrame(predictWebcam);
+            requestAnimationFrame(predictWebcam);
         }
 
         startButton.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                // Kamera akışını başlat
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-                startButton.style.display = 'none';
-                instructionArea.style.display = 'none';
-                await initMediaPipe();
+                
+                // Video boyutlarının yüklenmesini bekle
+                video.onloadedmetadata = () => {
+                    video.play();
+                    startButton.style.display = 'none';
+                    instructionArea.style.display = 'none';
+                    initMediaPipe();
+                };
             } catch (err) {
-                alert("Kamera izni alınamadı. Lütfen tarayıcı ayarlarından izin verin.");
+                alert("Kamera izni alınamadı. Lütfen tarayıcı izinlerini kontrol edin.");
             }
         });
     </script>
