@@ -7,13 +7,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         body { text-align: center; font-family: sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: #000; min-height: 480px; }
-        #webcam { width: 100%; transform: scaleX(-1); display: block; }
+        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: #000; }
+        #webcam { width: 100%; display: block; transform: scaleX(-1); }
         #overlayCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         #gaugeContainer { width: 80%; max-width: 300px; height: 30px; background: #ddd; margin: 20px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
         #gaugeFill { height: 100%; width: 0%; background-color: #4CAF50; transition: width 0.1s ease; }
-        #instructionArea { font-size: 14px; margin-bottom: 10px; background: #fff; padding: 10px; border-radius: 10px; }
-        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; }
+        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -28,10 +27,6 @@
         <div id="gaugeFill"></div>
     </div>
     <div id="scoreText">Puan: 0</div>
-
-    <div id="instructionArea">
-        <b>Kalibrasyon:</b> Yüzünü ovalin içine hizala.
-    </div>
     <button id="startButton">Egzersizi Başlat</button>
 
     <script>
@@ -39,69 +34,61 @@
         const canvas = document.getElementById('overlayCanvas');
         const ctx = canvas.getContext('2d');
         const startButton = document.getElementById('startButton');
-        const instructionArea = document.getElementById('instructionArea');
         const gaugeFill = document.getElementById('gaugeFill');
         const scoreText = document.getElementById('scoreText');
         
         let faceLandmarker;
 
-        // Oval çizim fonksiyonu
-        function drawOval() {
+        async function initApp() {
+            const { FaceLandmarker, FilesetResolver } = vision;
+            const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
+            faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
+                runningMode: "VIDEO"
+            });
+            
+            // Kamera başladığında boyutu ayarla
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+            
+            predictLoop();
+        }
+
+        function drawOval() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
             ctx.setLineDash([10, 10]);
             ctx.ellipse(canvas.width/2, canvas.height/2, canvas.width*0.25, canvas.height*0.35, 0, 0, 2 * Math.PI);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.strokeStyle = '#fff';
             ctx.lineWidth = 5;
             ctx.stroke();
-            ctx.setLineDash([]);
         }
 
-        async function initMediaPipe() {
-            const { FaceLandmarker, FilesetResolver } = vision;
-            const visionResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
-            faceLandmarker = await FaceLandmarker.createFromOptions(visionResolver, {
-                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
-                runningMode: "VIDEO"
-            });
-            // Model hazır olduğunda döngüyü başlat
-            requestAnimationFrame(predictWebcam);
-        }
-
-        function predictWebcam() {
-            drawOval(); // Ovali her frame'de çiz
+        function predictLoop() {
+            drawOval();
             if (faceLandmarker && video.readyState === 4) {
                 const results = faceLandmarker.detectForVideo(video, performance.now());
                 if (results.faceLandmarks && results.faceLandmarks.length > 0) {
                     const landmarks = results.faceLandmarks[0];
-                    const leftY = landmarks[70].y;
-                    const rightY = landmarks[300].y;
-                    const diff = Math.abs(leftY - rightY);
-                    const score = Math.max(0, 100 - (diff * 1500)); 
+                    // MediaPipe 70: sol kaş, 300: sağ kaş
+                    const diff = Math.abs(landmarks[70].y - landmarks[300].y);
+                    const score = Math.max(0, 100 - (diff * 1500));
                     gaugeFill.style.width = score + "%";
                     scoreText.innerText = "Puan: " + Math.round(score);
                 }
             }
-            requestAnimationFrame(predictWebcam);
+            requestAnimationFrame(predictLoop);
         }
 
         startButton.addEventListener('click', async () => {
             try {
-                // Kamera akışını başlat
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                 video.srcObject = stream;
-                
-                // Video boyutlarının yüklenmesini bekle
-                video.onloadedmetadata = () => {
-                    video.play();
-                    startButton.style.display = 'none';
-                    instructionArea.style.display = 'none';
-                    initMediaPipe();
-                };
+                video.play();
+                startButton.style.display = 'none';
+                await initApp();
             } catch (err) {
-                alert("Kamera izni alınamadı. Lütfen tarayıcı izinlerini kontrol edin.");
+                alert("Kamera izni gerekli: " + err.message);
             }
         });
     </script>
