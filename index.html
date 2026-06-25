@@ -7,13 +7,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         body { text-align: center; font-family: sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: #000; min-height: 480px; }
-        #webcam { width: 100%; display: block; transform: scaleX(-1); }
-        /* Canvas'ın video üzerinde görünmesi için z-index ve absolute konumlandırma */
-        #overlayCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
-        #gaugeContainer { width: 80%; max-width: 300px; height: 30px; background: #ddd; margin: 20px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
+        #container { position: relative; width: 360px; height: 480px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: #000; }
+        #webcam { width: 360px; height: 480px; display: block; transform: scaleX(-1); object-fit: cover; }
+        #overlayCanvas { position: absolute; top: 0; left: 0; width: 360px; height: 480px; z-index: 10; pointer-events: none; }
+        #gaugeContainer { width: 300px; height: 30px; background: #ddd; margin: 20px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
         #gaugeFill { height: 100%; width: 0%; background-color: #4CAF50; transition: width 0.1s ease; }
-        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; margin-top: 10px; }
+        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -34,28 +33,26 @@
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('overlayCanvas');
         const ctx = canvas.getContext('2d');
-        const startButton = document.getElementById('startButton');
         const gaugeFill = document.getElementById('gaugeFill');
         const scoreText = document.getElementById('scoreText');
         
         let faceLandmarker;
 
-        // Ovali çizme fonksiyonu
+        // Ovali çiz
         function drawOval() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, 360, 480);
             ctx.beginPath();
             ctx.setLineDash([10, 10]);
-            ctx.ellipse(canvas.width/2, canvas.height/2, canvas.width*0.25, canvas.height*0.35, 0, 0, 2 * Math.PI);
+            ctx.ellipse(180, 240, 90, 140, 0, 0, 2 * Math.PI);
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 5;
             ctx.stroke();
-            ctx.setLineDash([]);
         }
 
         async function initApp() {
-            // vision_bundle.js'in tamamen yüklendiğinden emin oluyoruz
+            // Kütüphanenin yüklenmesini bekle (Global 'vision' objesini kontrol et)
             if (typeof vision === 'undefined') {
-                alert("Kütüphane yüklenemedi, sayfayı yenileyin.");
+                setTimeout(initApp, 500); // 500ms bekle ve tekrar dene
                 return;
             }
             
@@ -70,12 +67,12 @@
         }
 
         function predictLoop() {
-            drawOval(); // Sürekli çiz
-            if (faceLandmarker && video.readyState >= 2) {
+            drawOval();
+            if (faceLandmarker && video.readyState === 4) {
                 const results = faceLandmarker.detectForVideo(video, performance.now());
                 if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-                    const landmarks = results.faceLandmarks[0];
-                    const diff = Math.abs(landmarks[70].y - landmarks[300].y);
+                    const l = results.faceLandmarks[0];
+                    const diff = Math.abs(l[70].y - l[300].y);
                     const score = Math.max(0, 100 - (diff * 1500));
                     gaugeFill.style.width = score + "%";
                     scoreText.innerText = "Puan: " + Math.round(score);
@@ -84,20 +81,14 @@
             requestAnimationFrame(predictLoop);
         }
 
-        startButton.addEventListener('click', async () => {
+        document.getElementById('startButton').addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-                
-                // Video boyutlarını netleştir
-                video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    startButton.style.display = 'none';
-                    initApp();
-                };
+                document.getElementById('startButton').style.display = 'none';
+                initApp();
             } catch (err) {
-                alert("Kamera izni hatası: " + err.message);
+                alert("Kamera izni gerekli!");
             }
         });
     </script>
