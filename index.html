@@ -46,21 +46,19 @@
         }
 
         async function startApp() {
-            // 1. Kamera
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
             video.srcObject = stream;
             
-            // 2. Metadata bekle (Kamera görüntü boyutu 0 olmasın)
-            await new Promise(r => video.onloadedmetadata = r);
+            // Safari için: video oynamaya başladığında boyutları kesinleşir
+            await new Promise(r => video.onplaying = r); 
             
-            // 3. MediaPipe
             const { FaceLandmarker, FilesetResolver } = vision;
             const resolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
             const landmarker = await FaceLandmarker.createFromOptions(resolver, {
                 baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
                 runningMode: "VIDEO"
             });
-
+            
             // 4. Döngü
             function loop() {
                 drawOval();
