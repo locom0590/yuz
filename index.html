@@ -7,9 +7,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
         body { text-align: center; font-family: sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: #000; }
+        #container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: #000; min-height: 480px; }
         #webcam { width: 100%; display: block; transform: scaleX(-1); }
-        #overlayCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        /* Canvas'ın video üzerinde görünmesi için z-index ve absolute konumlandırma */
+        #overlayCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
         #gaugeContainer { width: 80%; max-width: 300px; height: 30px; background: #ddd; margin: 20px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
         #gaugeFill { height: 100%; width: 0%; background-color: #4CAF50; transition: width 0.1s ease; }
         #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; margin-top: 10px; }
@@ -39,21 +40,7 @@
         
         let faceLandmarker;
 
-        async function initApp() {
-            const { FaceLandmarker, FilesetResolver } = vision;
-            const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
-            faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
-                runningMode: "VIDEO"
-            });
-            
-            // Kamera başladığında boyutu ayarla
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            predictLoop();
-        }
-
+        // Ovali çizme fonksiyonu
         function drawOval() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
@@ -62,15 +49,32 @@
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 5;
             ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        async function initApp() {
+            // vision_bundle.js'in tamamen yüklendiğinden emin oluyoruz
+            if (typeof vision === 'undefined') {
+                alert("Kütüphane yüklenemedi, sayfayı yenileyin.");
+                return;
+            }
+            
+            const { FaceLandmarker, FilesetResolver } = vision;
+            const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
+            faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+                baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
+                runningMode: "VIDEO"
+            });
+            
+            predictLoop();
         }
 
         function predictLoop() {
-            drawOval();
-            if (faceLandmarker && video.readyState === 4) {
+            drawOval(); // Sürekli çiz
+            if (faceLandmarker && video.readyState >= 2) {
                 const results = faceLandmarker.detectForVideo(video, performance.now());
                 if (results.faceLandmarks && results.faceLandmarks.length > 0) {
                     const landmarks = results.faceLandmarks[0];
-                    // MediaPipe 70: sol kaş, 300: sağ kaş
                     const diff = Math.abs(landmarks[70].y - landmarks[300].y);
                     const score = Math.max(0, 100 - (diff * 1500));
                     gaugeFill.style.width = score + "%";
@@ -84,11 +88,16 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                 video.srcObject = stream;
-                video.play();
-                startButton.style.display = 'none';
-                await initApp();
+                
+                // Video boyutlarını netleştir
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    startButton.style.display = 'none';
+                    initApp();
+                };
             } catch (err) {
-                alert("Kamera izni gerekli: " + err.message);
+                alert("Kamera izni hatası: " + err.message);
             }
         });
     </script>
