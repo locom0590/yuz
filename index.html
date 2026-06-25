@@ -6,21 +6,21 @@
     <title>Fasyal Egzersiz</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
-        body { text-align: center; font-family: sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-        #container { position: relative; width: 360px; height: 480px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: #000; }
+        body { text-align: center; font-family: sans-serif; background-color: #000; margin: 0; padding: 0; overflow: hidden; }
+        #container { position: relative; width: 360px; height: 480px; margin: 20px auto; border-radius: 15px; overflow: hidden; background: #222; }
         #webcam { width: 360px; height: 480px; display: block; transform: scaleX(-1); object-fit: cover; }
         #overlayCanvas { position: absolute; top: 0; left: 0; width: 360px; height: 480px; z-index: 10; pointer-events: none; }
-        #gaugeContainer { width: 300px; height: 30px; background: #ddd; margin: 20px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
+        #gaugeContainer { width: 300px; height: 30px; background: #ddd; margin: 10px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
         #gaugeFill { height: 100%; width: 0%; background-color: #4CAF50; transition: width 0.1s ease; }
-        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; }
+        #scoreText { color: #fff; font-size: 20px; margin: 10px; }
+        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <h1>Kaş Kaldırma</h1>
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
-        <canvas id="overlayCanvas"></canvas>
+        <canvas id="overlayCanvas" width="360" height="480"></canvas>
     </div>
     
     <div id="gaugeContainer">
@@ -38,7 +38,7 @@
         
         let faceLandmarker;
 
-        // Ovali çiz
+        // Ovali sabit çiziyoruz
         function drawOval() {
             ctx.clearRect(0, 0, 360, 480);
             ctx.beginPath();
@@ -47,31 +47,26 @@
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 5;
             ctx.stroke();
+            ctx.setLineDash([]);
         }
 
         async function initApp() {
-            // Kütüphanenin yüklenmesini bekle (Global 'vision' objesini kontrol et)
-            if (typeof vision === 'undefined') {
-                setTimeout(initApp, 500); // 500ms bekle ve tekrar dene
-                return;
-            }
-            
             const { FaceLandmarker, FilesetResolver } = vision;
             const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
             faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
                 baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
                 runningMode: "VIDEO"
             });
-            
+            drawOval();
             predictLoop();
         }
 
         function predictLoop() {
-            drawOval();
             if (faceLandmarker && video.readyState === 4) {
                 const results = faceLandmarker.detectForVideo(video, performance.now());
                 if (results.faceLandmarks && results.faceLandmarks.length > 0) {
                     const l = results.faceLandmarks[0];
+                    // Kaş simetrisi hesaplama
                     const diff = Math.abs(l[70].y - l[300].y);
                     const score = Math.max(0, 100 - (diff * 1500));
                     gaugeFill.style.width = score + "%";
@@ -86,7 +81,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 document.getElementById('startButton').style.display = 'none';
-                initApp();
+                await initApp();
             } catch (err) {
                 alert("Kamera izni gerekli!");
             }
