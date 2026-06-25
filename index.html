@@ -2,90 +2,85 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fasyal Egzersiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaş Egzersiz</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
     <style>
-        body { text-align: center; font-family: sans-serif; background-color: #000; margin: 0; padding: 0; overflow: hidden; }
-        #container { position: relative; width: 360px; height: 480px; margin: 20px auto; border-radius: 15px; overflow: hidden; background: #222; }
-        #webcam { width: 360px; height: 480px; display: block; transform: scaleX(-1); object-fit: cover; }
-        #overlayCanvas { position: absolute; top: 0; left: 0; width: 360px; height: 480px; z-index: 10; pointer-events: none; }
-        #gaugeContainer { width: 300px; height: 30px; background: #ddd; margin: 10px auto; border-radius: 15px; overflow: hidden; border: 2px solid #555; }
-        #gaugeFill { height: 100%; width: 0%; background-color: #4CAF50; transition: width 0.1s ease; }
-        #scoreText { color: #fff; font-size: 20px; margin: 10px; }
-        #startButton { background-color: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; margin-top: 20px; }
+        body { margin: 0; background: #222; text-align: center; color: white; font-family: sans-serif; }
+        #app { position: relative; width: 360px; height: 480px; margin: 20px auto; overflow: hidden; border: 2px solid white; }
+        #webcam { width: 360px; height: 480px; transform: scaleX(-1); object-fit: cover; }
+        #canvas { position: absolute; top: 0; left: 0; width: 360px; height: 480px; z-index: 5; }
+        #ui { position: absolute; bottom: 20px; width: 100%; z-index: 10; }
+        #gauge { width: 200px; height: 20px; background: #555; margin: 0 auto 10px; border-radius: 10px; overflow: hidden; }
+        #fill { width: 0%; height: 100%; background: lime; transition: 0.1s; }
     </style>
 </head>
 <body>
 
-    <div id="container">
+    <div id="app">
         <video id="webcam" autoplay playsinline></video>
-        <canvas id="overlayCanvas" width="360" height="480"></canvas>
+        <canvas id="canvas" width="360" height="480"></canvas>
+        <div id="ui">
+            <div id="gauge"><div id="fill"></div></div>
+            <div id="score">Puan: 0</div>
+            <button id="btn" style="padding: 10px 20px;">Başlat</button>
+        </div>
     </div>
-    
-    <div id="gaugeContainer">
-        <div id="gaugeFill"></div>
-    </div>
-    <div id="scoreText">Puan: 0</div>
-    <button id="startButton">Egzersizi Başlat</button>
 
     <script>
         const video = document.getElementById('webcam');
-        const canvas = document.getElementById('overlayCanvas');
+        const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const gaugeFill = document.getElementById('gaugeFill');
-        const scoreText = document.getElementById('scoreText');
-        
-        let faceLandmarker;
+        const fill = document.getElementById('fill');
+        const score = document.getElementById('score');
 
-        // Ovali sabit çiziyoruz
+        // Ovali çiz
         function drawOval() {
             ctx.clearRect(0, 0, 360, 480);
-            ctx.beginPath();
-            ctx.setLineDash([10, 10]);
-            ctx.ellipse(180, 240, 90, 140, 0, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = 'white';
             ctx.lineWidth = 5;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.ellipse(180, 240, 90, 130, 0, 0, 2 * Math.PI);
             ctx.stroke();
-            ctx.setLineDash([]);
         }
 
-        async function initApp() {
+        async function startApp() {
+            // 1. Kamera
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            
+            // 2. Metadata bekle (Kamera görüntü boyutu 0 olmasın)
+            await new Promise(r => video.onloadedmetadata = r);
+            
+            // 3. MediaPipe
             const { FaceLandmarker, FilesetResolver } = vision;
-            const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
-            faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+            const resolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
+            const landmarker = await FaceLandmarker.createFromOptions(resolver, {
                 baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
                 runningMode: "VIDEO"
             });
-            drawOval();
-            predictLoop();
-        }
 
-        function predictLoop() {
-            if (faceLandmarker && video.readyState === 4) {
-                const results = faceLandmarker.detectForVideo(video, performance.now());
-                if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-                    const l = results.faceLandmarks[0];
-                    // Kaş simetrisi hesaplama
-                    const diff = Math.abs(l[70].y - l[300].y);
-                    const score = Math.max(0, 100 - (diff * 1500));
-                    gaugeFill.style.width = score + "%";
-                    scoreText.innerText = "Puan: " + Math.round(score);
+            // 4. Döngü
+            function loop() {
+                drawOval();
+                const res = landmarker.detectForVideo(video, performance.now());
+                if(res.faceLandmarks.length > 0) {
+                    const l = res.faceLandmarks[0];
+                    const d = Math.abs(l[70].y - l[300].y);
+                    const s = Math.max(0, 100 - (d * 1500));
+                    fill.style.width = s + "%";
+                    score.innerText = "Puan: " + Math.round(s);
                 }
+                requestAnimationFrame(loop);
             }
-            requestAnimationFrame(predictLoop);
+            loop();
         }
 
-        document.getElementById('startButton').addEventListener('click', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                document.getElementById('startButton').style.display = 'none';
-                await initApp();
-            } catch (err) {
-                alert("Kamera izni gerekli!");
-            }
-        });
+        document.getElementById('btn').onclick = () => {
+            document.getElementById('btn').style.display = 'none';
+            startApp();
+        };
     </script>
 </body>
 </html>
