@@ -63,18 +63,25 @@
         }
 
         function renderLoop() {
-            const results = faceLandmarker.detectForVideo(video, performance.now());
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 1. Videonun hazır olduğunu kontrol et
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const results = faceLandmarker.detectForVideo(video, performance.now());
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (results.faceLandmarks) {
-                for (const landmarks of results.faceLandmarks) {
-                    ctx.fillStyle = "#2ecc71";
-                    // Tüm yüz hatlarını belirginleştirmek için tüm noktaları çiziyoruz
-                    landmarks.forEach(point => {
-                        ctx.beginPath();
-                        ctx.arc((1 - point.x) * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
-                        ctx.fill();
+                // 2. Eğer sonuç gelmiyorsa konsola yazdıralım (F12 tuşu ile Konsol'a bak)
+                if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+                    results.faceLandmarks.forEach(landmarks => {
+                        ctx.fillStyle = "#2ecc71";
+                        landmarks.forEach(point => {
+                            ctx.beginPath();
+                            // point.x ve point.y değerlerini kontrol et
+                            ctx.arc((1 - point.x) * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                            ctx.fill();
+                        });
                     });
+                } else {
+                    console.log("Yüz tespit edilemedi, yeterli ışık olduğundan emin olun.");
                 }
             }
             requestAnimationFrame(renderLoop);
