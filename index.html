@@ -5,14 +5,15 @@
     <title>Fasiyal Takip Prototipi</title>
     <style>
         body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        /* Video ve Canvas'ı aynı boyuta getiriyoruz */
         #container { position: relative; width: 100vw; height: 100vh; }
         #webcam, #output { 
             position: absolute; top: 0; left: 0; 
             width: 100%; height: 100%; 
-            object-fit: cover; /* Görüntünün taşmadan tam oturmasını sağlar */
+            object-fit: cover; 
             transform: scaleX(-1); 
         }
+        /* Hata mesajı için stil */
+        #debugMessage { position: absolute; top: 10px; color: yellow; font-size: 20px; z-index: 20; background: rgba(0,0,0,0.5); }
         #startBtn { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             padding: 20px 40px; font-size: 24px; cursor: pointer; background: #2ecc71; 
@@ -23,6 +24,7 @@
 <body>
 
     <button id="startBtn">Kamerayı Başlat</button>
+    <div id="debugMessage"></div>
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output"></canvas>
@@ -35,53 +37,52 @@
         const canvas = document.getElementById("output");
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("startBtn");
+        const debug = document.getElementById("debugMessage");
 
         let faceLandmarker;
 
         async function startApp() {
+            debug.innerText = "Yükleniyor...";
             try {
-                // Kamera izinlerini al
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 startBtn.style.display = "none";
                 
-                // MediaPipe Modeli
                 const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
                 faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
                     baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
                     runningMode: "VIDEO"
                 });
-
+                
+                debug.innerText = "Model yüklendi, kamera açık.";
+                
                 video.addEventListener("loadeddata", () => {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     renderLoop();
                 });
             } catch (err) {
-                alert("Kamera izni gerekli: " + err.message);
+                debug.innerText = "HATA: " + err.message;
             }
         }
 
         function renderLoop() {
-            // 1. Videonun hazır olduğunu kontrol et
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 const results = faceLandmarker.detectForVideo(video, performance.now());
-                
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // 2. Eğer sonuç gelmiyorsa konsola yazdıralım (F12 tuşu ile Konsol'a bak)
                 if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+                    debug.innerText = "Yüz algılandı!";
                     results.faceLandmarks.forEach(landmarks => {
                         ctx.fillStyle = "#2ecc71";
                         landmarks.forEach(point => {
                             ctx.beginPath();
-                            // point.x ve point.y değerlerini kontrol et
                             ctx.arc((1 - point.x) * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
                             ctx.fill();
                         });
                     });
                 } else {
-                    console.log("Yüz tespit edilemedi, yeterli ışık olduğundan emin olun.");
+                    debug.innerText = "Yüz bulunamadı, ışığı artır.";
                 }
             }
             requestAnimationFrame(renderLoop);
