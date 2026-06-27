@@ -77,12 +77,15 @@
                         ctx.fillStyle = "#2ecc71";
                         landmarks.forEach(point => {
                             ctx.beginPath();
-                            ctx.arc((1 - point.x) * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                            // DÜZELTME: Ters çevirme (1 - point.x) kaldırıldı, 
+                            // çünkü video zaten CSS ile scaleX(-1) ile aynalandı.
+                            // Noktaları doğrudan video koordinatlarına göre çiziyoruz.
+                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
                             ctx.fill();
                         });
                     });
                 } else {
-                    debug.innerText = "Yüz bulunamadı, ışığı artır.";
+                    debug.innerText = "Yüz bulunamadı.";
                 }
             }
             requestAnimationFrame(renderLoop);
