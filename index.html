@@ -26,14 +26,19 @@
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("startBtn");
 
-        // Detaylı yüz noktaları
+        // GÜNCEL İNDEKS LİSTESİ
         const FACIAL_POINTS = [
-            // Alın: 3'erli gruplar (Sağ, Orta, Sol)
-            10, 109, 67,   9, 107, 336,   8, 296, 334, 
-            // Burun (Ucu ve hat)
-            1, 2, 98, 327, 440, 4,
-            // Elmacık kemikleri (3'erli sağ/sol)
-            116, 117, 118,  346, 347, 348,
+            // Alın (Sağ, Orta, Sol - 3'erli)
+            109, 10, 338,   67, 9, 297,   107, 168, 336,
+            // Kaşlar (Sağ ve Sol tüm hat)
+            70, 63, 105, 66, 107, 55, 65, 52, 53, 46, // Sol kaş hattı
+            300, 293, 334, 296, 336, 285, 295, 282, 283, 276, // Sağ kaş hattı
+            // Burun (Kökü, sırtı, ucu ve delikleri)
+            1, 4, 5, 195, 197, 6, 2, 98, 327, // Burun sırtı ve ucu
+            440, 441, 442, 443, // Sağ burun deliği çevresi
+            220, 221, 222, 223, // Sol burun deliği çevresi
+            // Elmacık kemikleri
+            116, 117, 118, 346, 347, 348,
             // Mandibula (Çene hattı)
             152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234,
             378, 379, 365, 397, 288, 361, 323, 454
