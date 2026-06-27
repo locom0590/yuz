@@ -2,27 +2,19 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Fasiyal Takip Prototipi</title>
+    <title>Fasiyal Takip Düzeltilmiş</title>
     <style>
         body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #container { position: relative; width: 100vw; height: 100vh; }
-        #webcam, #output { 
-            position: absolute; top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            object-fit: cover; 
-            transform: scaleX(-1); 
-        }
-        /* Hata mesajı için stil */
-        #debugMessage { position: absolute; top: 10px; color: yellow; font-size: 20px; z-index: 20; background: rgba(0,0,0,0.5); }
-        #startBtn { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 20px 40px; font-size: 24px; cursor: pointer; background: #2ecc71; 
-            border: none; color: white; border-radius: 15px; z-index: 10; 
-        }
+        /* Sadece video aynalı olsun */
+        #webcam { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        /* Canvas aynalı olmasın, üzerine çizim yaparken biz ters çevireceğiz */
+        #output { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        #debugMessage { position: absolute; top: 10px; color: yellow; font-size: 20px; z-index: 20; }
+        #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 24px; cursor: pointer; background: #2ecc71; border: none; color: white; border-radius: 15px; z-index: 10; }
     </style>
 </head>
 <body>
-
     <button id="startBtn">Kamerayı Başlat</button>
     <div id="debugMessage"></div>
     <div id="container">
@@ -42,9 +34,11 @@
         let faceLandmarker;
 
         async function startApp() {
-            debug.innerText = "Yükleniyor...";
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // iPhone için kısıtlamaları gevşetiyoruz
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
                 video.srcObject = stream;
                 startBtn.style.display = "none";
                 
@@ -53,8 +47,6 @@
                     baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
                     runningMode: "VIDEO"
                 });
-                
-                debug.innerText = "Model yüklendi, kamera açık.";
                 
                 video.addEventListener("loadeddata", () => {
                     canvas.width = video.videoWidth;
@@ -71,21 +63,17 @@
                 const results = faceLandmarker.detectForVideo(video, performance.now());
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-                    debug.innerText = "Yüz algılandı!";
+                if (results.faceLandmarks) {
                     results.faceLandmarks.forEach(landmarks => {
                         ctx.fillStyle = "#2ecc71";
                         landmarks.forEach(point => {
                             ctx.beginPath();
-                            // DÜZELTME: Ters çevirme (1 - point.x) kaldırıldı, 
-                            // çünkü video zaten CSS ile scaleX(-1) ile aynalandı.
-                            // Noktaları doğrudan video koordinatlarına göre çiziyoruz.
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                            // DÜZELTME: X koordinatını yansıtıyoruz (1 - point.x)
+                            // Bu sayede video aynalıyken noktalar da onunla beraber hareket eder.
+                            ctx.arc((1 - point.x) * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
                             ctx.fill();
                         });
                     });
-                } else {
-                    debug.innerText = "Yüz bulunamadı.";
                 }
             }
             requestAnimationFrame(renderLoop);
