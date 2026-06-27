@@ -2,18 +2,17 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kaş Takip - Mobil Uyumlu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tam Fasiyal Takip</title>
     <style>
         body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #container { position: relative; width: 100vw; height: 100vh; }
-        /* Mobil cihazlarda görüntünün düzgün ölçeklenmesi için object-fit: cover ve transform */
         #webcam, #output { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 24px; cursor: pointer; background: #2ecc71; border: none; color: white; border-radius: 15px; z-index: 10; }
     </style>
 </head>
 <body>
-    <button id="startBtn">Başlat</button>
+    <button id="startBtn">Yüz Takibini Başlat</button>
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output"></canvas>
@@ -26,16 +25,21 @@
         const canvas = document.getElementById("output");
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("startBtn");
-        const EYEBROW_INDICES = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 300, 293, 334, 296, 336, 285, 295, 282, 283, 276];
+
+        // Tüm önemli yüz hatları (468 noktanın kritik bölgeleri)
+        const CRITICAL_INDICES = [
+            10, 151, 9, 8, 168, // Alın
+            70, 63, 105, 66, 107, 300, 293, 334, 296, 336, // Kaşlar
+            159, 145, 386, 374, // Göz kapakları
+            116, 346, 207, 427, // Elmacık kemikleri
+            61, 291, 0, 13, 14 // Dudak ve ağız
+        ];
 
         let faceLandmarker;
 
         async function startApp() {
             try {
-                // iPhone/Android için daha spesifik kamera ayarları
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
                 startBtn.style.display = "none";
                 
@@ -45,13 +49,11 @@
                     runningMode: "VIDEO"
                 });
                 
-                // Mobil cihazlarda video metadatası bazen geç yüklenir, döngüyü hemen başlatıyoruz
                 renderLoop();
-            } catch (err) { alert("Kamera hatası: " + err.message); }
+            } catch (err) { alert("Hata: " + err.message); }
         }
 
         function renderLoop() {
-            // video.readyState 2 veya 3 (HAVE_CURRENT_DATA veya HAVE_FUTURE_DATA) mobil cihazlarda daha stabil
             if (video.readyState >= 2) {
                 if (canvas.width !== video.videoWidth) {
                     canvas.width = video.videoWidth;
@@ -63,10 +65,11 @@
                 if (results.faceLandmarks) {
                     results.faceLandmarks.forEach(landmarks => {
                         ctx.fillStyle = "#2ecc71";
-                        EYEBROW_INDICES.forEach(index => {
+                        CRITICAL_INDICES.forEach(index => {
                             const point = landmarks[index];
                             ctx.beginPath();
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 6, 0, 2 * Math.PI); // Mobil için noktaları büyüttük
+                            // Nokta boyutu küçültüldü (2px)
+                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
                             ctx.fill();
                         });
                     });
