@@ -2,19 +2,17 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Fasiyal Takip - Tam Düzeltme</title>
+    <title>Kaş Takip Prototipi</title>
     <style>
-        body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #container { position: relative; width: 100vw; height: 100vh; }
-        /* Video artık olduğu gibi, aynalama yok */
-        #webcam { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        /* Canvas'ı ters çeviriyoruz ki çizimler aynalı olsun */
-        #output { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        /* Aynalı görüntü: Sen aynaya bakıyor gibi hareket edeceksin */
+        #webcam, #output { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 24px; cursor: pointer; background: #2ecc71; border: none; color: white; border-radius: 15px; z-index: 10; }
     </style>
 </head>
 <body>
-    <button id="startBtn">Kamerayı Başlat</button>
+    <button id="startBtn">Sadece Kaşları Başlat</button>
     <div id="container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output"></canvas>
@@ -28,13 +26,14 @@
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("startBtn");
 
+        // Sadece kaşlara ait MediaPipe noktaları
+        const EYEBROW_INDICES = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 300, 293, 334, 296, 336, 285, 295, 282, 283, 276];
+
         let faceLandmarker;
 
         async function startApp() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "user" } 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 startBtn.style.display = "none";
                 
@@ -60,11 +59,11 @@
                 if (results.faceLandmarks) {
                     results.faceLandmarks.forEach(landmarks => {
                         ctx.fillStyle = "#2ecc71";
-                        landmarks.forEach(point => {
+                        EYEBROW_INDICES.forEach(index => {
+                            const point = landmarks[index];
                             ctx.beginPath();
-                            // Noktaları normal (yansıtılmamış) çiziyoruz.
-                            // Canvas zaten CSS ile scaleX(-1) olduğu için her şey otomatik yansıyacak.
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                            // Videonun aynalı olmasıyla uyumlu koordinat hesaplama
+                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 4, 0, 2 * Math.PI);
                             ctx.fill();
                         });
                     });
