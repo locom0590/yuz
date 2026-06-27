@@ -2,8 +2,8 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gelişmiş Fasiyal Analiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hassas Yüz Analizi</title>
     <style>
         body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #container { position: relative; width: 100vw; height: 100vh; }
@@ -26,15 +26,14 @@
         const ctx = canvas.getContext("2d");
         const startBtn = document.getElementById("startBtn");
 
-        // Yüzün detaylı haritası (İstenilen tüm bölgeler dahil)
-        const FULL_FACE_INDICES = [
-            // Burun (Ucu ve orta hat)
+        // Detaylı yüz noktaları
+        const FACIAL_POINTS = [
+            // Alın: 3'erli gruplar (Sağ, Orta, Sol)
+            10, 109, 67,   9, 107, 336,   8, 296, 334, 
+            // Burun (Ucu ve hat)
             1, 2, 98, 327, 440, 4,
-            // Alın (3 yatay sıra)
-            10, 338, 297, 332, 284, 251, 389, 356, 454, 323, // Sağ
-            151, 108, 69, 103, 54, 21, 162, 127, 234, 93,     // Sol
-            // Elmacık Kemikleri (Sağ ve Sol)
-            116, 117, 118, 345, 346, 347,
+            // Elmacık kemikleri (3'erli sağ/sol)
+            116, 117, 118,  346, 347, 348,
             // Mandibula (Çene hattı)
             152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234,
             378, 379, 365, 397, 288, 361, 323, 454
@@ -44,7 +43,9 @@
 
         async function startApp() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
                 video.srcObject = stream;
                 startBtn.style.display = "none";
                 
@@ -55,21 +56,28 @@
                     numFaces: 1
                 });
                 renderLoop();
-            } catch (err) { alert("Kamera hatası: " + err.message); }
+            } catch (err) { alert("Hata: " + err.message); }
         }
 
         function renderLoop() {
             if (video.readyState >= 2) {
+                // Mobil için dinamik boyutlandırma
+                if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                }
+                
                 const results = faceLandmarker.detectForVideo(video, performance.now());
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 if (results.faceLandmarks) {
                     for (const landmarks of results.faceLandmarks) {
                         ctx.fillStyle = "#2ecc71";
-                        for (const index of FULL_FACE_INDICES) {
+                        for (const index of FACIAL_POINTS) {
                             const point = landmarks[index];
+                            // Koordinatları canvas boyutuna göre düzgün oranlıyoruz
                             ctx.beginPath();
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
+                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 3, 0, 2 * Math.PI);
                             ctx.fill();
                         }
                     }
