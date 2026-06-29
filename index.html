@@ -7,9 +7,8 @@
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100dvh; }
         .container { position: relative; width: 100vw; height: 100dvh; }
-        /* Videoyu ve Canvas'ı aynı boyutta sabitle */
         #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: absolute; top: 0; left: 0; z-index: 1; }
-        #output_canvas { z-index: 2; } /* Canvas üstte olsun */
+        #output_canvas { z-index: 2; } 
         #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 20px; z-index: 10; }
     </style>
 </head>
@@ -26,7 +25,7 @@
         let faceLandmarker;
         const video = document.getElementById("webcam");
         const canvas = document.getElementById("output_canvas");
-        const ctx = canvas.getContext("2d", { willReadFrequently: true }); // Optimizasyon
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
         const startBtn = document.getElementById("startBtn");
 
         async function init() {
@@ -46,10 +45,8 @@
             } catch (e) { alert("Kamera hatası!"); }
         });
 
-        // Loop: Her frame'de canvas boyutunu kontrol et
         function renderLoop() {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Canvas'ı videonun gerçek boyutuna uydur
                 if (canvas.width !== video.videoWidth) {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
@@ -70,16 +67,16 @@
                     const solAgiz = landmarks[61]; // Sol dudak köşesi
                     const sagAgiz = landmarks[291]; // Sağ dudak köşesi
                     
-                    // 2. Simetri Analizi: Y eksenindeki fark (fark ne kadar küçükse o kadar simetrik)
+                    // 2. Simetri Analizi: Y eksenindeki fark
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
                     
-                    // Veriyi konsola yazdır (Saniyede yaklaşık 30 kez güncellenir)
+                    // Veriyi konsola yazdır
                     console.log("Simetri Farkı (Y):", simetriFarki.toFixed(4));
 
-                    // 3. Görsel Geri Bildirim: Eğer fark çok yüksekse (örneğin 0.05'ten büyük), noktayı KIRMIZI yap
+                    // 3. Görsel Geri Bildirim: Eğer fark çok yüksekse KIRMIZI, düşükse YEŞİL yap
                     const isSimetric = simetriFarki < 0.03; 
                     
-                    // Çizim mantığı... (Bölgeleri tekrar çiziyoruz)
+                    // Çizim mantığı
                     const regions = {
                         "Dudaklar": { indices: [61, 291, 0, 17], color: isSimetric ? "#00FF00" : "#FF0000" }
                     };
