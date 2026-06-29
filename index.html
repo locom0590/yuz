@@ -56,42 +56,41 @@
             window.requestAnimationFrame(renderLoop);
         }
         
-        async function predict() {
+       async function predict() {
             if (!faceLandmarker) return;
             const results = faceLandmarker.detectForVideo(video, performance.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Hedefler (Ekranın sabit bir noktasında dudakların olması gereken yer)
+            const targetX = canvas.width * 0.5;
+            const targetY = canvas.height * 0.6;
+            
+            // 1. Hedef Çizimi (Ghost Markers)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.beginPath();
+            ctx.arc(targetX - 50, targetY, 10, 0, 2 * Math.PI); // Sol hedef
+            ctx.arc(targetX + 50, targetY, 10, 0, 2 * Math.PI); // Sağ hedef
+            ctx.fill();
+
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
-                    const solAgiz = landmarks[61]; 
-                    const sagAgiz = landmarks[291]; 
+                    const solAgiz = landmarks[61];
+                    const sagAgiz = landmarks[291];
                     
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
+                    const isSimetric = simetriFarki < 0.003; 
                     
-                    console.log("Simetri Farkı (Y):", simetriFarki.toFixed(4));
-                    
-                    if (simetriFarki > 0.01) {
-                        console.warn("Fark eşiği aşıldı, kırmızıya dönmeli! Değer:", simetriFarki);
-                    }
-
-                    // Eşik değerini 0.01 olarak güncelledik
-                    const isSimetric = simetriFarki < 0.008; 
-                    
-                    const regions = {
-                        "Dudaklar": { indices: [61, 291, 0, 17], color: isSimetric ? "#00FF00" : "#FF0000" }
-                    };
-
-                    for (const [name, data] of Object.entries(regions)) {
-                        ctx.fillStyle = data.color;
-                        for (const index of data.indices) {
-                            const point = landmarks[index];
-                            ctx.beginPath();
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
-                            ctx.fill();
-                        }
-                    }
+                    // Dudak Noktalarını Çiz
+                    ctx.fillStyle = isSimetric ? "#00FF00" : "#FF0000";
+                    [solAgiz, sagAgiz].forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x * canvas.width, p.y * canvas.height, 5, 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
                 }
             }
+            window.requestAnimationFrame(predict);
+        }
             window.requestAnimationFrame(predict);
         }
         
