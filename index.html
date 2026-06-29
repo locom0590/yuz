@@ -5,28 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Fasiyal Paralizi - Başlangıç</title>
     <style>
-        body { 
+        /* Sayfanın kaymasını ve boşluk oluşmasını engelleyen en kesin CSS */
+        html, body { 
             margin: 0; 
             padding: 0; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100dvh; /* Burası değişti */
             width: 100vw;
+            height: 100dvh;
             background-color: #000;
             font-family: sans-serif;
             overflow: hidden;
+            position: fixed; /* iPhone'da kaymayı durdurur */
         }
         .container { 
-            position: relative; 
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100vw; 
-            height: 100dvh; /* Burası değişti */
+            height: 100dvh;
+            overflow: hidden;
         }
         #webcam, #output_canvas { 
             width: 100%; 
             height: 100%; 
-            object-fit: cover; /* Görüntünün alanı tam doldurmasını sağlar */
+            object-fit: cover; /* Görüntüyü ekranı tamamen dolduracak şekilde kırpar */
             transform: scaleX(-1); /* Ayna efekti */
             display: block;
         }
@@ -61,13 +62,12 @@
 
         startBtn.addEventListener('click', async () => {
             try {
-                // Ön kamerayı zorunlu kılmak için facingMode: 'user'
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "user" }, 
                     audio: false 
                 });
                 video.srcObject = stream;
-                startBtn.style.display = 'none'; // Başla butonunu gizle
+                startBtn.style.display = 'none'; 
             } catch (err) {
                 console.error("Kamera hatası: ", err);
                 alert("Kameraya erişilemedi. Lütfen izin verin.");
