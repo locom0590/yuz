@@ -66,12 +66,22 @@
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
+                    // 1. Koordinatları Al
+                    const solAgiz = landmarks[61]; // Sol dudak köşesi
+                    const sagAgiz = landmarks[291]; // Sağ dudak köşesi
+                    
+                    // 2. Simetri Analizi: Y eksenindeki fark (fark ne kadar küçükse o kadar simetrik)
+                    const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
+                    
+                    // Veriyi konsola yazdır (Saniyede yaklaşık 30 kez güncellenir)
+                    console.log("Simetri Farkı (Y):", simetriFarki.toFixed(4));
+
+                    // 3. Görsel Geri Bildirim: Eğer fark çok yüksekse (örneğin 0.05'ten büyük), noktayı KIRMIZI yap
+                    const isSimetric = simetriFarki < 0.03; 
+                    
+                    // Çizim mantığı... (Bölgeleri tekrar çiziyoruz)
                     const regions = {
-                        "Gözler/Kaş": { indices: [33, 160, 158, 133, 153, 144, 263, 387, 385, 362, 380, 373, 70, 63, 105, 66, 107, 300, 293, 334, 296, 336], color: "#00FF00" },
-                        "Dudaklar": { indices: [61, 291, 0, 17, 37, 267], color: "#FFFF00" },
-                        "Nasolabial": { indices: [205, 425, 434, 435, 25, 204, 214, 215], color: "#FF00FF" },
-                        "Alın": { indices: [109, 10, 338, 103, 107, 336, 105, 66, 296], color: "#00FFFF" },
-                        "Elmacık": { indices: [117, 346], color: "#FFFFFF" }
+                        "Dudaklar": { indices: [61, 291, 0, 17], color: isSimetric ? "#00FF00" : "#FF0000" }
                     };
 
                     for (const [name, data] of Object.entries(regions)) {
@@ -79,13 +89,13 @@
                         for (const index of data.indices) {
                             const point = landmarks[index];
                             ctx.beginPath();
-                            // Nokta boyutu 1, x0.25 oranında
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 1, 0, 2 * Math.PI);
+                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 2, 0, 2 * Math.PI);
                             ctx.fill();
                         }
                     }
                 }
             }
+            window.requestAnimationFrame(predict);
         }
         
         video.addEventListener("loadedmetadata", () => {
