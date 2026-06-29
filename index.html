@@ -1,97 +1,22 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hassas Yüz Analizi</title>
-    <style>
-        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #container { position: relative; width: 100vw; height: 100vh; }
-        #webcam, #output { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 24px; cursor: pointer; background: #2ecc71; border: none; color: white; border-radius: 15px; z-index: 10; }
-    </style>
+    <title>Fasiyal Paralizi Rehabilite</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <button id="startBtn">Yüz Analizini Başlat</button>
-    <div id="container">
-        <video id="webcam" autoplay playsinline></video>
-        <canvas id="output"></canvas>
-    </div>
-
-    <script type="module">
-        import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
-
-        const video = document.getElementById("webcam");
-        const canvas = document.getElementById("output");
-        const ctx = canvas.getContext("2d");
-        const startBtn = document.getElementById("startBtn");
-
-        // GÜNCEL İNDEKS LİSTESİ
-        const FACIAL_POINTS = [
-            // Alın (Sağ, Orta, Sol - 3'erli)
-            109, 10, 338,   67, 9, 297,   107, 168, 336,
-            // Kaşlar (Sağ ve Sol tüm hat)
-            70, 63, 105, 66, 107, 55, 65, 52, 53, 46, // Sol kaş hattı
-            300, 293, 334, 296, 336, 285, 295, 282, 283, 276, // Sağ kaş hattı
-            // Burun (Kökü, sırtı, ucu ve delikleri)
-            1, 4, 5, 195, 197, 6, 2, 98, 327, // Burun sırtı ve ucu
-            440, 441, 442, 443, // Sağ burun deliği çevresi
-            220, 221, 222, 223, // Sol burun deliği çevresi
-            // Elmacık kemikleri
-            116, 117, 118, 346, 347, 348,
-            // Mandibula (Çene hattı)
-            152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234,
-            378, 379, 365, 397, 288, 361, 323, 454
-        ];
-
-        let faceLandmarker;
-
-        async function startApp() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
-                });
-                video.srcObject = stream;
-                startBtn.style.display = "none";
-                
-                const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
-                faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-                    baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task` },
-                    runningMode: "VIDEO",
-                    numFaces: 1
-                });
-                renderLoop();
-            } catch (err) { alert("Hata: " + err.message); }
+    <video id="webcam" style="display:none;" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
+    
+    <script>
+        // MediaPipe Face Landmarker başlatma kodları buraya gelecek
+        async function initCamera() {
+            const video = document.getElementById('webcam');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => { video.play(); };
         }
-
-        function renderLoop() {
-            if (video.readyState >= 2) {
-                // Mobil için dinamik boyutlandırma
-                if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                }
-                
-                const results = faceLandmarker.detectForVideo(video, performance.now());
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                if (results.faceLandmarks) {
-                    for (const landmarks of results.faceLandmarks) {
-                        ctx.fillStyle = "#2ecc71";
-                        for (const index of FACIAL_POINTS) {
-                            const point = landmarks[index];
-                            // Koordinatları canvas boyutuna göre düzgün oranlıyoruz
-                            ctx.beginPath();
-                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 3, 0, 2 * Math.PI);
-                            ctx.fill();
-                        }
-                    }
-                }
-            }
-            requestAnimationFrame(renderLoop);
-        }
-
-        startBtn.addEventListener("click", startApp);
+        initCamera();
     </script>
 </body>
 </html>
