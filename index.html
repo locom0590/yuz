@@ -31,17 +31,24 @@
 
     // 3. Yüzü Anlık Takip Et ve Verileri Al
     async function predictWebcam() {
-        let startTimeMs = performance.now();
-        const results = faceLandmarker.detectForVideo(video, startTimeMs);
-
-        if (results.faceLandmarks) {
-            for (const landmarks of results.faceLandmarks) {
-                // Burada her karede landmark verileri güncelleniyor
-                // Konsola ilk 5 noktanın koordinatlarını yazalım:
-                console.log("Burun ucu/göz konumu:", landmarks[0]); 
-            }
-        }
+    console.log("Tahmin döngüsü çalışıyor..."); // Fonksiyon giriyor mu?
+    
+    if (!faceLandmarker) {
+        console.warn("FaceLandmarker henüz hazır değil.");
         window.requestAnimationFrame(predictWebcam);
+        return;
+    }
+
+    let startTimeMs = performance.now();
+    const results = faceLandmarker.detectForVideo(video, startTimeMs);
+
+    if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+        console.log("Yüz tespit edildi:", results.faceLandmarks[0][0]);
+    } else {
+        console.log("Yüz algılanamadı, kamera açısı veya ışık?");
+    }
+    window.requestAnimationFrame(predictWebcam);
+}
     }
 </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
