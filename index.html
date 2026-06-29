@@ -1,8 +1,49 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
-    <meta charset="UTF-8">
+   <script type="module">
+    import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
+
+    let faceLandmarker;
+    let video = document.getElementById("webcam");
+    let canvas = document.getElementById("output_canvas");
+    let ctx = canvas.getContext("2d");
+
+    // 1. MediaPipe'i Başlat
+    async function setupFaceLandmarker() {
+        const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
+        faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`, delegate: "GPU" },
+            outputFaceBlendshapes: true,
+            runningMode: "VIDEO",
+            numFaces: 1
+        });
+    }
+    setupFaceLandmarker();
+
+    // 2. Kamera Başlatma ve Döngü
+    document.getElementById("startBtn").addEventListener("click", async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", predictWebcam);
+        document.getElementById("startBtn").style.display = 'none';
+    });
+
+    // 3. Yüzü Anlık Takip Et ve Verileri Al
+    async function predictWebcam() {
+        let startTimeMs = performance.now();
+        const results = faceLandmarker.detectForVideo(video, startTimeMs);
+
+        if (results.faceLandmarks) {
+            for (const landmarks of results.faceLandmarks) {
+                // Burada her karede landmark verileri güncelleniyor
+                // Konsola ilk 5 noktanın koordinatlarını yazalım:
+                console.log("Burun ucu/göz konumu:", landmarks[0]); 
+            }
+        }
+        window.requestAnimationFrame(predictWebcam);
+    }
+</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Fasiyal Paralizi - Başlangıç</title>
     <style>
