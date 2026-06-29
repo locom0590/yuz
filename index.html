@@ -4,10 +4,33 @@
     <meta charset="UTF-8">
     <title>Fasiyal Paralizi - Başlangıç</title>
     <style>
-        body { text-align: center; font-family: sans-serif; }
-        #webcam { width: 100%; max-width: 500px; transform: scaleX(-1); } /* Ayna yansıması için */
-        #output_canvas { position: absolute; top: 0; left: 0; width: 100%; max-width: 500px; transform: scaleX(-1); }
-        .container { position: relative; margin: 0 auto; max-width: 500px; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            background-color: #f0f0f0;
+            font-family: sans-serif;
+        }
+        .container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+        }
+        #webcam, #output_canvas { 
+            width: 100%; 
+            display: block; 
+            transform: scaleX(-1); /* Ayna efekti */
+            border-radius: 10px;
+        }
+        #output_canvas { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+        }
         button { padding: 15px 30px; font-size: 18px; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
