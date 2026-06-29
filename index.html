@@ -55,14 +55,25 @@
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
-                    ctx.fillStyle = "#00FF00";
-                    // Güncellenmiş koordinat hesaplaması:
-                    for (const point of landmarks) {
-                        const x = point.x * canvas.width; 
-                        const y = point.y * canvas.height;
-                        ctx.beginPath();
-                        ctx.arc(x, y, 2, 0, 2 * Math.PI);
-                        ctx.fill();
+                    // Bölge tanımları
+                    const regions = {
+                        "Sol Göz": { indices: [33, 160, 158, 133, 153, 144], color: "#FF0000" }, // Kırmızı
+                        "Sağ Göz": { indices: [263, 387, 385, 362, 380, 373], color: "#0000FF" }, // Mavi
+                        "Dudaklar": { indices: [61, 291, 0, 17, 37, 267], color: "#FFFF00" }, // Sarı
+                        "Sol Kaş": { indices: [70, 63, 105, 66, 107], color: "#00FF00" }, // Yeşil
+                        "Sağ Kaş": { indices: [300, 293, 334, 296, 336], color: "#00FF00" }  // Yeşil
+                    };
+
+                    for (const [regionName, data] of Object.entries(regions)) {
+                        ctx.fillStyle = data.color;
+                        for (const index of data.indices) {
+                            const point = landmarks[index];
+                            const x = point.x * canvas.width;
+                            const y = point.y * canvas.height;
+                            ctx.beginPath();
+                            ctx.arc(x, y, 4, 0, 2 * Math.PI); // Noktaları biraz büyüttük
+                            ctx.fill();
+                        }
                     }
                 }
             }
