@@ -63,26 +63,21 @@
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
-                    // 1. Koordinatları Al
-                    const solAgiz = landmarks[61]; // Sol dudak köşesi
-                    const sagAgiz = landmarks[291]; // Sağ dudak köşesi
+                    const solAgiz = landmarks[61]; 
+                    const sagAgiz = landmarks[291]; 
                     
-                    // 2. Simetri Analizi: Y eksenindeki fark
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
-                    
-                    // Veriyi konsola yazdır
+                    // Konsolda değeri gör, asimetrik yaptığında 0.03'ten büyük olup olmadığına bak
                     console.log("Simetri Farkı (Y):", simetriFarki.toFixed(4));
 
-                    // 3. Görsel Geri Bildirim: Eğer fark çok yüksekse KIRMIZI, düşükse YEŞİL yap
-                    const isSimetric = simetriFarki < 0.03; 
-                    
-                    // Çizim mantığı
                     const regions = {
-                        "Dudaklar": { indices: [61, 291, 0, 17], color: isSimetric ? "#00FF00" : "#FF0000" }
+                        "Dudaklar": { indices: [61, 291, 0, 17] }
                     };
 
                     for (const [name, data] of Object.entries(regions)) {
-                        ctx.fillStyle = data.color;
+                        // Rengi burada, dinamik olarak belirliyoruz
+                        ctx.fillStyle = (simetriFarki > 0.03) ? "#FF0000" : "#00FF00";
+                        
                         for (const index of data.indices) {
                             const point = landmarks[index];
                             ctx.beginPath();
@@ -92,6 +87,8 @@
                     }
                 }
             }
+            window.requestAnimationFrame(predict);
+        }
             window.requestAnimationFrame(predict);
         }
         
