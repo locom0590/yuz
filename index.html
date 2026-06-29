@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Fasiyal Paralizi - Takip</title>
+    <title>Fasiyal Paralizi - Oyunlaştırma</title>
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100dvh; }
         .container { position: relative; width: 100vw; height: 100dvh; }
@@ -56,26 +56,27 @@
             window.requestAnimationFrame(renderLoop);
         }
         
-       async function predict() {
+        async function predict() {
             if (!faceLandmarker) return;
             const results = faceLandmarker.detectForVideo(video, performance.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Hedefler (Ekranın sabit bir noktasında dudakların olması gereken yer)
-            const targetX = canvas.width * 0.5;
-            const targetY = canvas.height * 0.6;
-            
+            // Hedefleri canvas'ın merkezine göre sabitliyoruz
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height * 0.6; 
+            const gap = 150; // Hedefler arası mesafe (yüz genişliğine göre ayarlanabilir)
+
             // 1. Hedef Çizimi (Ghost Markers)
             ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
             ctx.beginPath();
-            ctx.arc(targetX - 50, targetY, 10, 0, 2 * Math.PI); // Sol hedef
-            ctx.arc(targetX + 50, targetY, 10, 0, 2 * Math.PI); // Sağ hedef
+            ctx.arc(centerX - gap/2, centerY, 15, 0, 2 * Math.PI); // Sol hedef
+            ctx.arc(centerX + gap/2, centerY, 15, 0, 2 * Math.PI); // Sağ hedef
             ctx.fill();
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
-                    const solAgiz = landmarks[61];
-                    const sagAgiz = landmarks[291];
+                    const solAgiz = landmarks[61]; // Sol dudak
+                    const sagAgiz = landmarks[291]; // Sağ dudak
                     
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
                     const isSimetric = simetriFarki < 0.003; 
@@ -84,13 +85,11 @@
                     ctx.fillStyle = isSimetric ? "#00FF00" : "#FF0000";
                     [solAgiz, sagAgiz].forEach(p => {
                         ctx.beginPath();
-                        ctx.arc(p.x * canvas.width, p.y * canvas.height, 5, 0, 2 * Math.PI);
+                        ctx.arc(p.x * canvas.width, p.y * canvas.height, 8, 0, 2 * Math.PI);
                         ctx.fill();
                     });
                 }
             }
-            window.requestAnimationFrame(predict);
-        }
             window.requestAnimationFrame(predict);
         }
         
