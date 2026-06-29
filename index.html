@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Fasiyal Paralizi - Tam Takip</title>
+    <title>Fasiyal Paralizi - Takip</title>
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100dvh; }
         .container { position: relative; width: 100vw; height: 100dvh; }
-        #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: absolute; top: 0; left: 0; }
+        /* Videoyu ve Canvas'ı aynı boyutta sabitle */
+        #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: absolute; top: 0; left: 0; z-index: 1; }
+        #output_canvas { z-index: 2; } /* Canvas üstte olsun */
         #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 20px; z-index: 10; }
     </style>
 </head>
@@ -24,7 +26,7 @@
         let faceLandmarker;
         const video = document.getElementById("webcam");
         const canvas = document.getElementById("output_canvas");
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true }); // Optimizasyon
         const startBtn = document.getElementById("startBtn");
 
         async function init() {
@@ -37,18 +39,26 @@
         init();
 
         startBtn.addEventListener("click", async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            video.srcObject = stream;
-            startBtn.style.display = 'none';
-            // Mobil için en kritik adım: canvas iç çözünürlüğünü ayarla
-            const resizeCanvas = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-            };
-            video.onloadedmetadata = resizeCanvas;
-            predict();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = stream;
+                startBtn.style.display = 'none';
+            } catch (e) { alert("Kamera hatası!"); }
         });
 
+        // Loop: Her frame'de canvas boyutunu kontrol et
+        function renderLoop() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                // Canvas'ı videonun gerçek boyutuna uydur
+                if (canvas.width !== video.videoWidth) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                }
+                predict();
+            }
+            window.requestAnimationFrame(renderLoop);
+        }
+        
         async function predict() {
             if (!faceLandmarker) return;
             const results = faceLandmarker.detectForVideo(video, performance.now());
@@ -59,9 +69,9 @@
                     const regions = {
                         "Gözler/Kaş": { indices: [33, 160, 158, 133, 153, 144, 263, 387, 385, 362, 380, 373, 70, 63, 105, 66, 107, 300, 293, 334, 296, 336], color: "#00FF00" },
                         "Dudaklar": { indices: [61, 291, 0, 17, 37, 267], color: "#FFFF00" },
-                        "Nasolabial": { indices: [205, 425, 434, 435, 25, 204, 214, 215], color: "#FF00FF" }, // 4 sağ + 4 sol
-                        "Alın Çizgileri": { indices: [109, 10, 338, 103, 107, 336, 105, 66, 296], color: "#00FFFF" }, // 3 sol, 3 orta, 3 sağ
-                        "Elmacık Çıkıntı": { indices: [117, 346], color: "#FFFFFF" }
+                        "Nasolabial": { indices: [205, 425, 434, 435, 25, 204, 214, 215], color: "#FF00FF" },
+                        "Alın": { indices: [109, 10, 338, 103, 107, 336, 105, 66, 296], color: "#00FFFF" },
+                        "Elmacık": { indices: [117, 346], color: "#FFFFFF" }
                     };
 
                     for (const [name, data] of Object.entries(regions)) {
@@ -69,14 +79,18 @@
                         for (const index of data.indices) {
                             const point = landmarks[index];
                             ctx.beginPath();
+                            // Nokta boyutu 1, x0.25 oranında
                             ctx.arc(point.x * canvas.width, point.y * canvas.height, 1, 0, 2 * Math.PI);
                             ctx.fill();
                         }
                     }
                 }
             }
-            window.requestAnimationFrame(predict);
         }
+        
+        video.addEventListener("loadedmetadata", () => {
+            renderLoop();
+        });
     </script>
 </body>
 </html>
