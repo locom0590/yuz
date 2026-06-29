@@ -5,50 +5,41 @@
     import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
     let faceLandmarker;
-    let video = document.getElementById("webcam");
-    let canvas = document.getElementById("output_canvas");
-    let ctx = canvas.getContext("2d");
+    const video = document.getElementById("webcam");
+    const startBtn = document.getElementById("startBtn");
 
-    // 1. MediaPipe'i Başlat
-    async function setupFaceLandmarker() {
+    async function init() {
         const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
         faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`, delegate: "GPU" },
-            outputFaceBlendshapes: true,
-            runningMode: "VIDEO",
-            numFaces: 1
+            baseOptions: { 
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", 
+                delegate: "GPU" 
+            },
+            runningMode: "VIDEO"
         });
+        console.log("MediaPipe hazır!");
     }
-    setupFaceLandmarker();
 
-    // 2. Kamera Başlatma ve Döngü
-    document.getElementById("startBtn").addEventListener("click", async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        video.srcObject = stream;
-        video.addEventListener("loadeddata", predictWebcam);
-        document.getElementById("startBtn").style.display = 'none';
+    init();
+
+    startBtn.addEventListener("click", async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            video.srcObject = stream;
+            startBtn.style.display = 'none';
+            video.addEventListener("loadeddata", predict);
+        } catch (e) {
+            console.error("Kamera hatası:", e);
+        }
     });
 
-    // 3. Yüzü Anlık Takip Et ve Verileri Al
-    async function predictWebcam() {
-    console.log("Tahmin döngüsü çalışıyor..."); // Fonksiyon giriyor mu?
-    
-    if (!faceLandmarker) {
-        console.warn("FaceLandmarker henüz hazır değil.");
-        window.requestAnimationFrame(predictWebcam);
-        return;
-    }
-
-    let startTimeMs = performance.now();
-    const results = faceLandmarker.detectForVideo(video, startTimeMs);
-
-    if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-        console.log("Yüz tespit edildi:", results.faceLandmarks[0][0]);
-    } else {
-        console.log("Yüz algılanamadı, kamera açısı veya ışık?");
-    }
-    window.requestAnimationFrame(predictWebcam);
-}
+    async function predict() {
+        if (!faceLandmarker) return;
+        const results = faceLandmarker.detectForVideo(video, performance.now());
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+            console.log("Yüz algılandı:", results.faceLandmarks[0][0]);
+        }
+        window.requestAnimationFrame(predict);
     }
 </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
