@@ -21,6 +21,8 @@
     }
 
     init();
+canvas.width = video.videoWidth;
+canvas.height = video.videoHeight;
 
     startBtn.addEventListener("click", async () => {
         try {
@@ -33,58 +35,31 @@
         }
     });
 
-    async function predict() {
+   async function predict() {
         if (!faceLandmarker) return;
+
+        // Görüntüyü işle
         const results = faceLandmarker.detectForVideo(video, performance.now());
-        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-            console.log("Yüz algılandı:", results.faceLandmarks[0][0]);
+
+        // Canvas'ı temizle
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (results.faceLandmarks) {
+            for (const landmarks of results.faceLandmarks) {
+                // Her nokta için canvas'a çizim yap
+                ctx.fillStyle = "#00FF00"; // Yeşil noktalar
+                for (const point of landmarks) {
+                    // Kamera ayna modunda olduğu için x koordinatını ters çeviriyoruz
+                    const x = (1 - point.x) * canvas.width;
+                    const y = point.y * canvas.height;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
         }
         window.requestAnimationFrame(predict);
     }
-</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Fasiyal Paralizi - Başlangıç</title>
-    <style>
-        /* Sayfanın kaymasını ve boşluk oluşmasını engelleyen en kesin CSS */
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            width: 100vw;
-            height: 100dvh;
-            background-color: #000;
-            font-family: sans-serif;
-            overflow: hidden;
-            position: fixed; /* iPhone'da kaymayı durdurur */
-        }
-        .container { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw; 
-            height: 100dvh;
-            overflow: hidden;
-        }
-        #webcam, #output_canvas { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; /* Görüntüyü ekranı tamamen dolduracak şekilde kırpar */
-            transform: scaleX(-1); /* Ayna efekti */
-            display: block;
-        }
-        #output_canvas { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-        }
-        #startBtn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            font-size: 20px;
-            z-index: 10;
-        }
     </style>
 </head>
 <body>
