@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Fasiyal Paralizi - Takip</title>
+    <title>Fasiyal Paralizi - Tam Takip</title>
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100dvh; }
         .container { position: relative; width: 100vw; height: 100dvh; }
@@ -33,7 +33,6 @@
                 baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
                 runningMode: "VIDEO"
             });
-            console.log("MediaPipe Hazır!");
         }
         init();
 
@@ -41,15 +40,13 @@
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
             video.srcObject = stream;
             startBtn.style.display = 'none';
-            video.onloadedmetadata = () => {
-                // iPhone için canvas'ın fiziksel boyutunu ekranla eşitle
+            // Mobil için en kritik adım: canvas iç çözünürlüğünü ayarla
+            const resizeCanvas = () => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                // Görünürlüğü garanti altına almak için canvas stilini de zorla
-                canvas.style.width = "100%";
-                canvas.style.height = "100%";
-                predict();
             };
+            video.onloadedmetadata = resizeCanvas;
+            predict();
         });
 
         async function predict() {
@@ -60,22 +57,19 @@
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
                     const regions = {
-                        "Sol Göz": { indices: [33, 160, 158, 133, 153, 144], color: "#FF0000" },
-                        "Sağ Göz": { indices: [263, 387, 385, 362, 380, 373], color: "#0000FF" },
+                        "Gözler/Kaş": { indices: [33, 160, 158, 133, 153, 144, 263, 387, 385, 362, 380, 373, 70, 63, 105, 66, 107, 300, 293, 334, 296, 336], color: "#00FF00" },
                         "Dudaklar": { indices: [61, 291, 0, 17, 37, 267], color: "#FFFF00" },
-                        "Sol Kaş": { indices: [70, 63, 105, 66, 107], color: "#00FF00" },
-                        "Sağ Kaş": { indices: [300, 293, 334, 296, 336], color: "#00FF00" }
+                        "Nasolabial": { indices: [205, 425, 434, 435, 25, 204, 214, 215], color: "#FF00FF" }, // 4 sağ + 4 sol
+                        "Alın Çizgileri": { indices: [109, 10, 338, 103, 107, 336, 105, 66, 296], color: "#00FFFF" }, // 3 sol, 3 orta, 3 sağ
+                        "Elmacık Çıkıntı": { indices: [117, 346], color: "#FFFFFF" }
                     };
 
-                    for (const [regionName, data] of Object.entries(regions)) {
+                    for (const [name, data] of Object.entries(regions)) {
                         ctx.fillStyle = data.color;
                         for (const index of data.indices) {
                             const point = landmarks[index];
-                            // Mobil ekran çözünürlüğü için değerleri normalize ediyoruz
-                            const x = point.x * canvas.width;
-                            const y = point.y * canvas.height;
                             ctx.beginPath();
-                            ctx.arc(x, y, 1, 0, 2 * Math.PI); // Boyut 4'ten 1'e düşürüldü (x0.25)
+                            ctx.arc(point.x * canvas.width, point.y * canvas.height, 1, 0, 2 * Math.PI);
                             ctx.fill();
                         }
                     }
