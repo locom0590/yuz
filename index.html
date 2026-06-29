@@ -67,17 +67,22 @@
                     const sagAgiz = landmarks[291]; 
                     
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
-                    // Konsolda değeri gör, asimetrik yaptığında 0.03'ten büyük olup olmadığına bak
+                    
                     console.log("Simetri Farkı (Y):", simetriFarki.toFixed(4));
+                    
+                    if (simetriFarki > 0.01) {
+                        console.warn("Fark eşiği aşıldı, kırmızıya dönmeli! Değer:", simetriFarki);
+                    }
 
+                    // Eşik değerini 0.01 olarak güncelledik
+                    const isSimetric = simetriFarki < 0.01; 
+                    
                     const regions = {
-                        "Dudaklar": { indices: [61, 291, 0, 17] }
+                        "Dudaklar": { indices: [61, 291, 0, 17], color: isSimetric ? "#00FF00" : "#FF0000" }
                     };
 
                     for (const [name, data] of Object.entries(regions)) {
-                        // Rengi burada, dinamik olarak belirliyoruz
-                        ctx.fillStyle = (simetriFarki > 0.03) ? "#FF0000" : "#00FF00";
-                        
+                        ctx.fillStyle = data.color;
                         for (const index of data.indices) {
                             const point = landmarks[index];
                             ctx.beginPath();
@@ -87,8 +92,6 @@
                     }
                 }
             }
-            window.requestAnimationFrame(predict);
-        }
             window.requestAnimationFrame(predict);
         }
         
