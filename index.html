@@ -1,22 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <title>Fasiyal Paralizi Rehabilite</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <title>Fasiyal Paralizi - Başlangıç</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; }
+        #webcam { width: 100%; max-width: 500px; transform: scaleX(-1); } /* Ayna yansıması için */
+        #output_canvas { position: absolute; top: 0; left: 0; width: 100%; max-width: 500px; transform: scaleX(-1); }
+        .container { position: relative; margin: 0 auto; max-width: 500px; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; margin-top: 20px; }
+    </style>
 </head>
 <body>
-    <video id="webcam" style="display:none;" autoplay playsinline></video>
-    <canvas id="output_canvas"></canvas>
+
+    <h1>Rehabilitasyon Başlatıcı</h1>
     
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output_canvas"></canvas>
+    </div>
+
+    <button id="startBtn">Başla</button>
+
     <script>
-        // MediaPipe Face Landmarker başlatma kodları buraya gelecek
-        async function initCamera() {
-            const video = document.getElementById('webcam');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => { video.play(); };
-        }
-        initCamera();
+        const video = document.getElementById('webcam');
+        const startBtn = document.getElementById('startBtn');
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                // Ön kamerayı zorunlu kılmak için facingMode: 'user'
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                startBtn.style.display = 'none'; // Başla butonunu gizle
+            } catch (err) {
+                console.error("Kamera hatası: ", err);
+                alert("Kameraya erişilemedi. Lütfen izin verin.");
+            }
+        });
     </script>
 </body>
 </html>
