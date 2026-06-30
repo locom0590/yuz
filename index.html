@@ -101,7 +101,7 @@
                     
                     if (isSimetric) basariSayaci++; else basariSayaci = 0;
 
-                    if (basariSayaci > 0) {
+                    if (basariSayaci > 0 && basariSayaci < hedefSure) {
                         ctx.fillStyle = "white";
                         ctx.font = "24px Arial";
                         ctx.textAlign = "left";
@@ -109,6 +109,7 @@
                     }
 
                     if (basariSayaci >= hedefSure) {
+                        // 1. Kutlama Efektlerini Göster
                         const emoji = ["🎉", "🎊", "✨"][Math.floor(Math.random() * 3)];
                         const x = Math.random() * canvas.width;
                         const y = Math.random() * canvas.height;
@@ -119,6 +120,12 @@
                         ctx.fillStyle = "white";
                         ctx.font = "bold 40px Arial";
                         ctx.fillText("MÜKEMMEL!", canvas.width / 2, canvas.height / 2);
+
+                        // 2. Sayacı 2 saniye (60 frame) daha devam ettir ve sonra sıfırla
+                        basariSayaci++;
+                        if (basariSayaci >= hedefSure + 60) {
+                            basariSayaci = 0;
+                        }
                     }
                     
                     ctx.fillStyle = isSimetric ? "#00FF00" : "#FF0000";
