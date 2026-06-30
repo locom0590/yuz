@@ -61,20 +61,24 @@
             const results = faceLandmarker.detectForVideo(video, performance.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Hedefleri canvas'ın merkezine göre sabitliyoruz
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height * 0.6; 
-            const gap = 150; // Hedefler arası mesafe (yüz genişliğine göre ayarlanabilir)
-
-            // 1. Hedef Çizimi (Ghost Markers)
-            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-            ctx.beginPath();
-            ctx.arc(centerX - gap/2, centerY, 15, 0, 2 * Math.PI); // Sol hedef
-            ctx.arc(centerX + gap/2, centerY, 15, 0, 2 * Math.PI); // Sağ hedef
-            ctx.fill();
-
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
+                    // Çapa noktamız: Burun ucu (indeks 1)
+                    const burunUcu = landmarks[1];
+                    const hedefMesafesi = 0.05; 
+
+                    // 1. Hedef Çizimi (Burun ucuna göre konumlandırılmış Ghost Markers)
+                    const solHedefX = (burunUcu.x - hedefMesafesi) * canvas.width;
+                    const sagHedefX = (burunUcu.x + hedefMesafesi) * canvas.width;
+                    const hedefY = (burunUcu.y + 0.05) * canvas.height;
+
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+                    ctx.beginPath();
+                    ctx.arc(solHedefX, hedefY, 15, 0, 2 * Math.PI); // Sol hedef
+                    ctx.arc(sagHedefX, hedefY, 15, 0, 2 * Math.PI); // Sağ hedef
+                    ctx.fill();
+
+                    // Dudak verileri
                     const solAgiz = landmarks[61]; // Sol dudak
                     const sagAgiz = landmarks[291]; // Sağ dudak
                     
@@ -90,6 +94,8 @@
                     });
                 }
             }
+            window.requestAnimationFrame(predict);
+        }
             window.requestAnimationFrame(predict);
         }
         
