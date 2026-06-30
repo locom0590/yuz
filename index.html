@@ -7,9 +7,9 @@
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100dvh; }
         .container { position: relative; width: 100vw; height: 100dvh; }
-        #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
+        #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: absolute; top: 0; left: 0; z-index: 1; }
         #output_canvas { z-index: 2; } 
-        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; }
+        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; color: white; }
         button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
     </style>
 </head>
@@ -19,10 +19,10 @@
         <canvas id="output_canvas"></canvas>
         <div id="menu">
             <button id="startBtn">Başla</button>
-            <div id="sideSelect" style="display:none;">
-                <p style="color:white;">Hangi taraf etkilenmiş?</p>
-                <button onclick="setSide('sol')">Sol Taraf</button>
-                <button onclick="setSide('sag')">Sağ Taraf</button>
+            <div id="sideSelection" style="display:none;">
+                <p>Etkilenen tarafı seçin:</p>
+                <button onclick="setSide('left')">Sol Taraf</button>
+                <button onclick="setSide('right')">Sağ Taraf</button>
             </div>
         </div>
     </div>
@@ -30,7 +30,7 @@
     <script type="module">
         import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
-        let faceLandmarker, etkilenenTaraf = null;
+        let faceLandmarker, affectedSide = null;
         let basariSayaci = 0;
         const hedefSure = 60;
         
@@ -38,12 +38,7 @@
         const canvas = document.getElementById("output_canvas");
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         const startBtn = document.getElementById("startBtn");
-        const sideSelect = document.getElementById("sideSelect");
-
-        window.setSide = (side) => {
-            etkilenenTaraf = side;
-            sideSelect.style.display = 'none';
-        };
+        const sideSelection = document.getElementById("sideSelection");
 
         async function init() {
             const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
@@ -59,9 +54,15 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
                 startBtn.style.display = 'none';
-                sideSelect.style.display = 'block';
+                sideSelection.style.display = 'block';
             } catch (e) { alert("Kamera hatası!"); }
         });
+
+        window.setSide = (side) => {
+            affectedSide = side;
+            sideSelection.style.display = 'none';
+            renderLoop();
+        };
 
         function renderLoop() {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -75,17 +76,13 @@
         }
         
         async function predict() {
-            if (!faceLandmarker || !etkilenenTaraf) return;
+            if (!faceLandmarker) return;
             const results = faceLandmarker.detectForVideo(video, performance.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
                     const burunUcu = landmarks[1];
-                    const solAgiz = landmarks[61];
-                    const sagAgiz = landmarks[291];
-                    
-                    // Hedefler
                     const hedefMesafesi = 0.05; 
                     const solHedefX = (burunUcu.x - hedefMesafesi) * canvas.width;
                     const sagHedefX = (burunUcu.x + hedefMesafesi) * canvas.width;
@@ -97,6 +94,8 @@
                     ctx.arc(sagHedefX, hedefY, 15, 0, 2 * Math.PI);
                     ctx.fill();
 
+                    const solAgiz = landmarks[61];
+                    const sagAgiz = landmarks[291];
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
                     const isSimetric = simetriFarki < 0.003; 
                     
@@ -105,6 +104,7 @@
                     if (basariSayaci > 0) {
                         ctx.fillStyle = "white";
                         ctx.font = "24px Arial";
+                        ctx.textAlign = "left";
                         ctx.fillText("Odaklan: " + (basariSayaci / 30).toFixed(1) + " sn", 50, 50);
                     }
 
@@ -124,8 +124,6 @@
                 }
             }
         }
-        
-        video.addEventListener("loadedmetadata", () => renderLoop());
     </script>
 </body>
 </html>
