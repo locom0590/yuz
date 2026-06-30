@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -19,10 +19,13 @@
     </div>
     <button id="startBtn">Başla</button>
 
-   <script type="module">
+    <script type="module">
         import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
         let faceLandmarker;
+        let basariSayaci = 0;
+        const hedefSure = 60; // 60 frame yaklaşık 2 saniyeye denk gelir
+        
         const video = document.getElementById("webcam");
         const canvas = document.getElementById("output_canvas");
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -63,29 +66,43 @@
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
-                    // Çapa noktamız: Burun ucu (indeks 1)
                     const burunUcu = landmarks[1];
                     const hedefMesafesi = 0.05; 
 
-                    // 1. Hedef Çizimi (Burun ucuna göre konumlandırılmış Ghost Markers)
                     const solHedefX = (burunUcu.x - hedefMesafesi) * canvas.width;
                     const sagHedefX = (burunUcu.x + hedefMesafesi) * canvas.width;
                     const hedefY = (burunUcu.y + 0.05) * canvas.height;
 
                     ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
                     ctx.beginPath();
-                    ctx.arc(solHedefX, hedefY, 15, 0, 2 * Math.PI); // Sol hedef
-                    ctx.arc(sagHedefX, hedefY, 15, 0, 2 * Math.PI); // Sağ hedef
+                    ctx.arc(solHedefX, hedefY, 15, 0, 2 * Math.PI);
+                    ctx.arc(sagHedefX, hedefY, 15, 0, 2 * Math.PI);
                     ctx.fill();
 
-                    // Dudak verileri
-                    const solAgiz = landmarks[61]; // Sol dudak
-                    const sagAgiz = landmarks[291]; // Sağ dudak
+                    const solAgiz = landmarks[61];
+                    const sagAgiz = landmarks[291];
                     
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
                     const isSimetric = simetriFarki < 0.003; 
                     
-                    // Dudak Noktalarını Çiz
+                    if (isSimetric) {
+                        basariSayaci++;
+                    } else {
+                        basariSayaci = 0;
+                    }
+
+                    if (basariSayaci > 0) {
+                        ctx.fillStyle = "white";
+                        ctx.font = "24px Arial";
+                        ctx.fillText("Odaklan: " + (basariSayaci / 30).toFixed(1) + " sn", 50, 50);
+                    }
+
+                    if (basariSayaci >= hedefSure) {
+                        ctx.fillStyle = "#00FF00";
+                        ctx.font = "bold 48px Arial";
+                        ctx.fillText("HARİKA!", canvas.width / 2 - 80, canvas.height / 2);
+                    }
+                    
                     ctx.fillStyle = isSimetric ? "#00FF00" : "#FF0000";
                     [solAgiz, sagAgiz].forEach(p => {
                         ctx.beginPath();
@@ -94,7 +111,6 @@
                     });
                 }
             }
-            // Döngü renderLoop içerisinde zaten tetikleniyor, buraya gerek yok.
         }
         
         video.addEventListener("loadedmetadata", () => {
