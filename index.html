@@ -1,35 +1,49 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Fasiyal Paralizi - Oyunlaştırma</title>
+    <title>Fasiyal Paralizi - Rehabilitasyon</title>
     <style>
         body { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100dvh; }
         .container { position: relative; width: 100vw; height: 100dvh; }
-        #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); position: absolute; top: 0; left: 0; z-index: 1; }
+        #webcam, #output_canvas { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
         #output_canvas { z-index: 2; } 
-        #startBtn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 20px; z-index: 10; }
+        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
+        <div id="menu">
+            <button id="startBtn">Başla</button>
+            <div id="sideSelect" style="display:none;">
+                <p style="color:white;">Hangi taraf etkilenmiş?</p>
+                <button onclick="setSide('sol')">Sol Taraf</button>
+                <button onclick="setSide('sag')">Sağ Taraf</button>
+            </div>
+        </div>
     </div>
-    <button id="startBtn">Başla</button>
 
     <script type="module">
         import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
-        let faceLandmarker;
+        let faceLandmarker, etkilenenTaraf = null;
         let basariSayaci = 0;
-        const hedefSure = 60; // 60 frame yaklaşık 2 saniyeye denk gelir
+        const hedefSure = 60;
         
         const video = document.getElementById("webcam");
         const canvas = document.getElementById("output_canvas");
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         const startBtn = document.getElementById("startBtn");
+        const sideSelect = document.getElementById("sideSelect");
+
+        window.setSide = (side) => {
+            etkilenenTaraf = side;
+            sideSelect.style.display = 'none';
+        };
 
         async function init() {
             const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm");
@@ -45,6 +59,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
                 startBtn.style.display = 'none';
+                sideSelect.style.display = 'block';
             } catch (e) { alert("Kamera hatası!"); }
         });
 
@@ -60,15 +75,18 @@
         }
         
         async function predict() {
-            if (!faceLandmarker) return;
+            if (!faceLandmarker || !etkilenenTaraf) return;
             const results = faceLandmarker.detectForVideo(video, performance.now());
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (results.faceLandmarks) {
                 for (const landmarks of results.faceLandmarks) {
                     const burunUcu = landmarks[1];
+                    const solAgiz = landmarks[61];
+                    const sagAgiz = landmarks[291];
+                    
+                    // Hedefler
                     const hedefMesafesi = 0.05; 
-
                     const solHedefX = (burunUcu.x - hedefMesafesi) * canvas.width;
                     const sagHedefX = (burunUcu.x + hedefMesafesi) * canvas.width;
                     const hedefY = (burunUcu.y + 0.05) * canvas.height;
@@ -79,17 +97,10 @@
                     ctx.arc(sagHedefX, hedefY, 15, 0, 2 * Math.PI);
                     ctx.fill();
 
-                    const solAgiz = landmarks[61];
-                    const sagAgiz = landmarks[291];
-                    
                     const simetriFarki = Math.abs(solAgiz.y - sagAgiz.y);
                     const isSimetric = simetriFarki < 0.003; 
                     
-                    if (isSimetric) {
-                        basariSayaci++;
-                    } else {
-                        basariSayaci = 0;
-                    }
+                    if (isSimetric) basariSayaci++; else basariSayaci = 0;
 
                     if (basariSayaci > 0) {
                         ctx.fillStyle = "white";
@@ -99,8 +110,9 @@
 
                     if (basariSayaci >= hedefSure) {
                         ctx.fillStyle = "#00FF00";
-                        ctx.font = "bold 48px Arial";
-                        ctx.fillText("HARİKA!", canvas.width / 2 - 80, canvas.height / 2);
+                        ctx.font = "bold 60px Arial";
+                        ctx.textAlign = "center";
+                        ctx.fillText("HARİKA!", canvas.width / 2, canvas.height / 2);
                     }
                     
                     ctx.fillStyle = isSimetric ? "#00FF00" : "#FF0000";
@@ -113,9 +125,7 @@
             }
         }
         
-        video.addEventListener("loadedmetadata", () => {
-            renderLoop();
-        });
+        video.addEventListener("loadedmetadata", () => renderLoop());
     </script>
 </body>
 </html>
