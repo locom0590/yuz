@@ -19,7 +19,7 @@
     </div>
     <button id="startBtn">Başla</button>
 
-    <script type="module">
+   <script type="module">
         import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js";
 
         let faceLandmarker;
@@ -94,9 +94,7 @@
                     });
                 }
             }
-            window.requestAnimationFrame(predict);
-        }
-            window.requestAnimationFrame(predict);
+            // Döngü renderLoop içerisinde zaten tetikleniyor, buraya gerek yok.
         }
         
         video.addEventListener("loadedmetadata", () => {
